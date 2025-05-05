@@ -1,6 +1,6 @@
 // SpreadPerformanceChart.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
+import * as d3 from 'd3':
 import { FilterState } from '../types/types';
 import './SpreadPerformanceChart.css';
 
