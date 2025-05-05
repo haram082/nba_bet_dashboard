@@ -35,7 +35,6 @@ const FACTORS: Factor[] = [
   { id: 'opp_pts', name: 'Opponent Points', threshold: 100, enabled: true, direction: 'lte' },
   { id: 'pf', name: 'Personal Fouls', threshold: 20, enabled: true, direction: 'lte' },
   { id: 'is_home', name: 'Home Game', threshold: 't', enabled: true, direction: 'eq' },
-  { id: 'is_home', name: 'Away Game', threshold: 'f', enabled: true, direction: 'eq' },
 ];
 
 interface Factor {

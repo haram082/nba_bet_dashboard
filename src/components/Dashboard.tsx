@@ -95,15 +95,6 @@ const Dashboard: React.FC = () => {
         if (record.team_id === tempFilters.selectedTeam || 
             record.opp_team_id === tempFilters.selectedTeam || 
             gameYear === tempFilters.selectedYear) {
-          console.log('Potential match:', {
-            record_team_id: record.team_id,
-            record_opp_team_id: record.opp_team_id,
-            selected_team: tempFilters.selectedTeam,
-            record_season_year: record.season_year,
-            selected_year: tempFilters.selectedYear,
-            isTeamMatch,
-            yearMatch: gameYear === tempFilters.selectedYear
-          });
         }
         
         return isTeamMatch && gameYear === tempFilters.selectedYear;

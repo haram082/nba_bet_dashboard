@@ -1,51 +1,29 @@
-// SpreadPerformanceChart.tsx
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3':
-import { FilterState } from '../types/types';
-import './SpreadPerformanceChart.css';
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+import { FilterState, GameData } from '../types/types';
+import './SpreadPerformanceChart.css'; // Reusing existing CSS
 
 interface Props {
   filters: FilterState;
+  data: GameData[]; // Take data directly from Dashboard
 }
 
-interface GameRecord {
-  game_date: string;
-  team_id: string;
-  season: string;
-  season_year: string;
-  spread: string;
-  point_margin: string;
-  matchup: string;
-}
-
-const SpreadPerformanceChart: React.FC<Props> = ({ filters }) => {
+const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
-
-  const [data, setData] = useState<GameRecord[]>([]);
-
-  useEffect(() => {
-    d3.csv('/betting_merged_cleaned_flipped_spread.csv').then((loadedData) => {
-      setData(loadedData as GameRecord[]);
-    });
-  }, []);
 
   useEffect(() => {
     if (!data.length) return;
 
-    const filtered = data
-      .filter(
-        (d) =>
-          d.team_id === filters.selectedTeam &&
-          d.season === filters.selectedYear.toString()
-      )
-      .map((d) => ({
+    // Process the data from props instead of loading CSV
+    const processed = data
+      .map(d => ({
         ...d,
         date: new Date(d.game_date),
-        open: +d.spread,
-        close: +d.point_margin,
+        open: parseFloat(d.spread),
+        close: parseFloat(d.point_margin),
       }))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
+      .sort((a, b) => new Date(a.game_date).getTime() - new Date(b.game_date).getTime());
 
     const margin = { top: 20, right: 30, bottom: 40, left: 60 };
     const width = 960 - margin.left - margin.right;
@@ -57,23 +35,27 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters }) => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
+    // Create scales
     const x = d3
       .scaleBand<Date>()
-      .domain(filtered.map((d) => d.date))
+      .domain(processed.map(d => new Date(d.game_date)))
       .range([0, width])
       .padding(0.4);
 
+    // Calculate y domain with some padding
+    const yMin = d3.min(processed, d => Math.min(parseFloat(d.spread), parseFloat(d.point_margin))) || -10;
+    const yMax = d3.max(processed, d => Math.max(parseFloat(d.spread), parseFloat(d.point_margin))) || 10;
+    
     const y = d3
       .scaleLinear()
-      .domain([
-        d3.min(filtered, (d) => Math.min(d.open, d.close))! - 5,
-        d3.max(filtered, (d) => Math.max(d.open, d.close))! + 5,
-      ])
+      .domain([yMin - 5, yMax + 5])
       .nice()
       .range([height, 0]);
 
+    // Add x-axis with rotated labels
     chart
       .append('g')
+      .attr('class', 'x-axis')
       .attr('transform', `translate(0,${height})`)
       .call(
         d3
@@ -85,21 +67,39 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters }) => {
       .attr('transform', 'rotate(-45)')
       .style('text-anchor', 'end');
 
-    chart.append('g').call(d3.axisLeft(y));
+    // Add y-axis
+    chart
+      .append('g')
+      .attr('class', 'y-axis')
+      .call(d3.axisLeft(y));
 
+    // Add reference line at y=0
+    chart
+      .append('line')
+      .attr('class', 'reference-line')
+      .attr('x1', 0)
+      .attr('x2', width)
+      .attr('y1', y(0))
+      .attr('y2', y(0))
+      .attr('stroke', '#999')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '3,3');
+
+    // Set up tooltip
     const tooltip = d3.select(tooltipRef.current);
 
+    // Draw candlesticks
     chart
       .selectAll('.candle')
-      .data(filtered)
+      .data(processed)
       .enter()
       .append('line')
       .attr('class', 'candle')
-      .attr('x1', (d) => x(d.date)! + x.bandwidth() / 2)
-      .attr('x2', (d) => x(d.date)! + x.bandwidth() / 2)
-      .attr('y1', (d) => y(d.open))
-      .attr('y2', (d) => y(d.close))
-      .attr('stroke', (d) => (d.close > d.open ? 'green' : 'red'))
+      .attr('x1', d => (x(new Date(d.game_date)) || 0) + x.bandwidth() / 2)
+      .attr('x2', d => (x(new Date(d.game_date)) || 0) + x.bandwidth() / 2)
+      .attr('y1', d => y(parseFloat(d.spread)))
+      .attr('y2', d => y(parseFloat(d.point_margin)))
+      .attr('stroke', d => parseFloat(d.point_margin) > parseFloat(d.spread) ? "green" : "red")
       .attr('stroke-width', 4)
       .on('mouseover', function (event, d) {
         tooltip
@@ -108,24 +108,34 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters }) => {
             `<strong>${d.game_date}</strong><br/>
              Matchup: ${d.matchup}<br/>
              Spread: ${d.spread}<br/>
-             Margin: ${d.point_margin}`
+             Margin: ${d.point_margin}<br/>
+             ${parseFloat(d.point_margin) > parseFloat(d.spread) ? 'Beat the Spread' : 'Failed to Beat the Spread'}`
           );
         d3.select(this).attr('stroke-width', 6);
       })
       .on('mousemove', function (event) {
         tooltip
-          .style('top', event.pageY - 40 + 'px')
-          .style('left', event.pageX + 10 + 'px');
+          .style('top', '5%')
+          .style('left', '20%');
       })
       .on('mouseout', function () {
         tooltip.style('visibility', 'hidden');
         d3.select(this).attr('stroke-width', 4);
       });
+
+    // Add chart title
+    chart
+      .append('text')
+      .attr('x', width / 2)
+      .attr('y', -margin.top / 2)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '16px')
+      .text('Spread vs. Actual Performance');
+
   }, [data, filters]);
 
   return (
     <div style={{ position: 'relative' }}>
-      <h2>NBA Spread vs. Point Margin Candlestick Chart</h2>
       <svg ref={svgRef} width={960} height={500}></svg>
       <div
         ref={tooltipRef}
@@ -139,6 +149,7 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters }) => {
           fontSize: '12px',
           pointerEvents: 'none',
           boxShadow: '0px 0px 5px rgba(0,0,0,0.1)',
+          zIndex: 1000
         }}
       ></div>
     </div>
