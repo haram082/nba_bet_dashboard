@@ -91,11 +91,6 @@ const Dashboard: React.FC = () => {
         const gameYear = parseInt(record.season_year);
         const isTeamMatch = record.team_id === tempFilters.selectedTeam || record.opp_team_id === tempFilters.selectedTeam;
         
-        // Log only if it's close to matching
-        if (record.team_id === tempFilters.selectedTeam || 
-            record.opp_team_id === tempFilters.selectedTeam || 
-            gameYear === tempFilters.selectedYear) {
-        }
         
         return isTeamMatch && gameYear === tempFilters.selectedYear;
       });

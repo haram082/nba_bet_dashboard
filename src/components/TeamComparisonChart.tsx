@@ -30,7 +30,7 @@ const TeamComparisonChart: React.FC<Props> = ({ data, filters }) => {
   const [comparisonType, setComparisonType] = useState<'home_away' | 'playoff_regular'>('home_away');
 
   const filteredData = data.filter(game => 
-    (game.team_id === filters.selectedTeam || game.opp_team_id === filters.selectedTeam) &&
+    (game.team_id === filters.selectedTeam) &&
     game.season_year === filters.selectedYear.toString()
   );
 

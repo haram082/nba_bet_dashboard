@@ -29,11 +29,13 @@ interface Props {
 }
 
 const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
-  const filteredData = data.filter(game => 
-    (game.team_id === filters.selectedTeam || game.opp_team_id === filters.selectedTeam) &&
-    game.season_year === filters.selectedYear.toString() &&
-    parseFloat(game.moneyline_price) > 0 // Only underdog games
-  );
+  const filteredData = data
+    .filter(game => 
+      (game.team_id === filters.selectedTeam || game.opp_team_id === filters.selectedTeam) &&
+      game.season_year === filters.selectedYear.toString() &&
+      parseFloat(game.moneyline_price) > 0 // Only underdog games
+    )
+    .sort((a, b) => new Date(a.game_date).getTime() - new Date(b.game_date).getTime()); // Sort by date
 
   // Calculate cumulative profit
   let cumulativeProfit = 0;
