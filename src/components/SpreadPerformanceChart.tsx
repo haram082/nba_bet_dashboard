@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { FilterState, GameData } from '../types/types';
-import './SpreadPerformanceChart.css'; // Reusing existing CSS
+import './SpreadPerformanceChart.css'; 
 
 interface Props {
   filters: FilterState;
@@ -17,11 +17,14 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
 
     // Process the data from props instead of loading CSV
     const processed = data
+      .filter((value, index, self) => 
+      index === self.findIndex((t) => t.game_id === value.game_id)
+      )
       .map(d => ({
-        ...d,
-        date: new Date(d.game_date),
-        open: parseFloat(d.spread),
-        close: parseFloat(d.point_margin),
+      ...d,
+      date: new Date(d.game_date),
+      open: -parseFloat(d.spread),
+      close: parseFloat(d.point_margin),
       }))
       .sort((a, b) => new Date(a.game_date).getTime() - new Date(b.game_date).getTime());
 
