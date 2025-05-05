@@ -17,9 +17,6 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
 
     // Process the data from props instead of loading CSV
     const processed = data
-      .filter((value, index, self) => 
-      index === self.findIndex((t) => t.game_id === value.game_id)
-      )
       .map(d => ({
       ...d,
       date: new Date(d.game_date),
@@ -46,8 +43,8 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
       .padding(0.4);
 
     // Calculate y domain with some padding
-    const yMin = d3.min(processed, d => Math.min(parseFloat(d.spread), parseFloat(d.point_margin))) || -10;
-    const yMax = d3.max(processed, d => Math.max(parseFloat(d.spread), parseFloat(d.point_margin))) || 10;
+    const yMin = d3.min(processed, d => Math.min(-parseFloat(d.spread), parseFloat(d.point_margin))) || -10;
+    const yMax = d3.max(processed, d => Math.max(-parseFloat(d.spread), parseFloat(d.point_margin))) || 10;
     
     const y = d3
       .scaleLinear()
@@ -100,9 +97,9 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
       .attr('class', 'candle')
       .attr('x1', d => (x(new Date(d.game_date)) || 0) + x.bandwidth() / 2)
       .attr('x2', d => (x(new Date(d.game_date)) || 0) + x.bandwidth() / 2)
-      .attr('y1', d => y(parseFloat(d.spread)))
+      .attr('y1', d => y(-parseFloat(d.spread)))
       .attr('y2', d => y(parseFloat(d.point_margin)))
-      .attr('stroke', d => parseFloat(d.point_margin) > parseFloat(d.spread) ? "green" : "red")
+      .attr('stroke', d => parseFloat(d.point_margin) > -parseFloat(d.spread) ? "green" : "red")
       .attr('stroke-width', 4)
       .on('mouseover', function (event, d) {
         tooltip
@@ -112,7 +109,7 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
              Matchup: ${d.matchup}<br/>
              Spread: ${d.spread}<br/>
              Margin: ${d.point_margin}<br/>
-             ${parseFloat(d.point_margin) > parseFloat(d.spread) ? 'Beat the Spread' : 'Failed to Beat the Spread'}`
+             ${parseFloat(d.point_margin) > -parseFloat(d.spread) ? 'Beat the Spread' : 'Failed to Beat the Spread'}`
           );
         d3.select(this).attr('stroke-width', 6);
       })
