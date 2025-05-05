@@ -17,6 +17,7 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
 
     // Process the data from props instead of loading CSV
     const processed = data
+      .filter(d => d.team_id === filters.selectedTeam)
       .map(d => ({
       ...d,
       date: new Date(d.game_date),
