@@ -99,6 +99,14 @@ const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
           width={600}
         />
       </div>
+
+      {/* Optional chart caption */}
+      <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
+          This chart shows how the selected team performed in relation to their moneylines across the selected season.
+          Assuming a typical unit (e.g. $10, $100, etc.), this shows how a bettor would profit across the season if they put one unit on each game for this team. 
+  
+        </p>
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Win Rate</div>

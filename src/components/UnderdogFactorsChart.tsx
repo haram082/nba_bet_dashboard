@@ -155,6 +155,14 @@ const UnderdogFactorsChart: React.FC<Props> = ({ data, filters }) => {
       <div className="chart-container">
         <Pie data={calculateFactorImpact()} options={options} />
       </div>
+
+      {/* Optional chart caption */}
+      <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
+          This pie chart shows what factors played a big role in this teams underdog wins for this season.
+          Hovering over a slice will show a percentage that represents what percent of the total underdog wins that stat played a big part in;
+          "big part" meaning it met a threshold of significance that we determined ourselves. 
+  
+        </p>
     </div>
   );
 };

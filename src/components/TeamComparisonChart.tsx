@@ -130,6 +130,13 @@ const TeamComparisonChart: React.FC<Props> = ({ data, filters }) => {
       <div className="chart-content">
         <Bar data={calculateComparisonData()} options={options} />
       </div>
+
+      {/* Optional chart caption */}
+      <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
+          Here we see how a team compares when either playing at home or away from home and also how they perform in the regular season vs. the playoffs. 
+          Win rate is shown as a percentage and moneyline is avergage across the respective assortment of games. 
+  
+        </p>
     </div>
   );
 };

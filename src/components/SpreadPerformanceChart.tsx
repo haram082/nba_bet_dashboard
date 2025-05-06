@@ -5,7 +5,7 @@ import './SpreadPerformanceChart.css';
 
 interface Props {
   filters: FilterState;
-  data: GameData[]; // Take data directly from Dashboard
+  data: GameData[]; 
 }
 
 const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
@@ -15,7 +15,6 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
   useEffect(() => {
     if (!data.length) return;
 
-    // Process the data from props instead of loading CSV
     const processed = data
       .filter(d => d.team_id === filters.selectedTeam)
       .map(d => ({
@@ -43,7 +42,7 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
       .range([0, width])
       .padding(0.4);
 
-    // Calculate y domain with some padding
+    
     const yMin = d3.min(processed, d => Math.min(-parseFloat(d.spread), parseFloat(d.point_margin))) || -10;
     const yMax = d3.max(processed, d => Math.max(-parseFloat(d.spread), parseFloat(d.point_margin))) || 10;
     
@@ -138,6 +137,13 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
   return (
     <div style={{ position: 'relative' }}>
       <svg ref={svgRef} width={960} height={500}></svg>
+
+       {/* Optional chart caption */}
+        <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
+          This chart shows how the selected team performed relative to the betting spread across the selected season. (A spread of -5.0 means that team is projected to win by 5 points)
+          On hovering, the viewer will see the actual spread and point margin, but for the purpose of the candlestick, spread is flips sign in the position of the graph. 
+          
+        </p>
       <div
         ref={tooltipRef}
         style={{
