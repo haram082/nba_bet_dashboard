@@ -159,6 +159,7 @@ const UnderdogFactorsChart: React.FC<Props> = ({ data, filters }) => {
       {/* Optional chart caption */}
       <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
           This pie chart shows what factors played a big role in this teams underdog wins for this season.
+          An underdog win is classified when a team is not favored to win (based on a positive moneyline) but they pull of the win anyways. 
           Hovering over a slice will show a percentage that represents what percent of the total underdog wins that stat played a big part in;
           "big part" meaning it met a threshold of significance that we determined ourselves. 
   

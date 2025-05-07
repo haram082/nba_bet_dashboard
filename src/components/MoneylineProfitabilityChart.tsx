@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { GameData, FilterState } from '../types/types';
 import './MoneylineProfitabilityChart.css';
 
@@ -20,7 +21,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin
 );
 
 interface Props {
@@ -30,18 +32,18 @@ interface Props {
 
 const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
   const filteredData = data
-    .filter(game => 
+    .filter(game =>
       (game.team_id === filters.selectedTeam || game.opp_team_id === filters.selectedTeam) &&
       game.season_year === filters.selectedYear.toString() &&
       parseFloat(game.moneyline_price) > 0 // Only underdog games
     )
-    .sort((a, b) => new Date(a.game_date).getTime() - new Date(b.game_date).getTime()); // Sort by date
+    .sort((a, b) => new Date(a.game_date).getTime() - new Date(b.game_date).getTime());
 
   // Calculate cumulative profit
   let cumulativeProfit = 0;
   const profitData = filteredData.map(game => {
-    const betAmount = 1; // 1 unit
-    const profit = game.wl === 'W' 
+    const betAmount = 1;
+    const profit = game.wl === 'W'
       ? (parseFloat(game.moneyline_price) > 0 ? parseFloat(game.moneyline_price) / 100 : 1) * betAmount
       : -betAmount;
     cumulativeProfit += profit;
@@ -70,6 +72,26 @@ const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
       title: {
         display: true,
         text: 'Moneyline Betting Profitability',
+      },
+      annotation: {
+        annotations: {
+          zeroLine: {
+            type: 'line' as const, 
+            yMin: 0,
+            yMax: 0,
+            borderColor: 'red',
+            borderWidth: 2,
+            label: {
+              display: true,
+              position: 'end' as const,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              font: {
+                size: 10,
+              },
+            },
+          },
+        },
       },
     },
     scales: {
@@ -100,12 +122,10 @@ const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
         />
       </div>
 
-      {/* Optional chart caption */}
       <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
-          This chart shows how the selected team performed in relation to their moneylines across the selected season.
-          Assuming a typical unit (e.g. $10, $100, etc.), this shows how a bettor would profit across the season if they put one unit on each game for this team. 
-  
-        </p>
+        This chart shows how the selected team performed in relation to their moneylines across the selected season.
+        Assuming a typical unit (e.g. $10, $100, etc.), this shows how a bettor would profit across the season if they put one unit on each game for this team.
+      </p>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -125,4 +145,4 @@ const MoneylineProfitabilityChart: React.FC<Props> = ({ data, filters }) => {
   );
 };
 
-export default MoneylineProfitabilityChart; 
+export default MoneylineProfitabilityChart;

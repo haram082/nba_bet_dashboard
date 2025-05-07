@@ -25,4 +25,6 @@
 
 .chart-content {
   flex-grow: 1;
+  height: 500px; /* or whatever value you want */
+  position: relative;
 } 

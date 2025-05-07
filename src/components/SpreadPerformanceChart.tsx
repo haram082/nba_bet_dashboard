@@ -73,6 +73,16 @@ const SpreadPerformanceChart: React.FC<Props> = ({ filters, data }) => {
       .attr('class', 'y-axis')
       .call(d3.axisLeft(y));
 
+    // Add y-axis label
+    chart
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -height / 2)
+      .attr('y', -margin.left + 15)
+      .style('font-size', '12px')
+      .text('Point Differential');
+
     // Add reference line at y=0
     chart
       .append('line')

@@ -30,70 +30,53 @@ const TeamComparisonChart: React.FC<Props> = ({ data, filters }) => {
   const [comparisonType, setComparisonType] = useState<'home_away' | 'playoff_regular'>('home_away');
 
   const filteredData = data.filter(game => 
-    (game.team_id === filters.selectedTeam) &&
+    game.team_id === filters.selectedTeam &&
     game.season_year === filters.selectedYear.toString()
   );
 
   const calculateComparisonData = () => {
+    let labelA = '';
+    let labelB = '';
+    let groupA: GameData[] = [];
+    let groupB: GameData[] = [];
+
     if (comparisonType === 'home_away') {
-      const homeGames = filteredData.filter(game => game.is_home === 't');
-      const awayGames = filteredData.filter(game => game.is_home === 'f');
-
-      return {
-        labels: ['Home', 'Away'],
-        datasets: [
-          {
-            label: 'Win Rate',
-            data: [
-              homeGames.length > 0 ? (homeGames.filter(g => g.wl === 'W').length / homeGames.length) * 100 : 0,
-              awayGames.length > 0 ? (awayGames.filter(g => g.wl === 'W').length / awayGames.length) * 100 : 0,
-            ],
-            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-          },
-          {
-            label: 'Average Moneyline',
-            data: [
-              homeGames.length > 0 ? homeGames.reduce((acc, game) => acc + parseFloat(game.moneyline_price), 0) / homeGames.length : 0,
-              awayGames.length > 0 ? awayGames.reduce((acc, game) => acc + parseFloat(game.moneyline_price), 0) / awayGames.length : 0,
-            ],
-            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1,
-          },
-        ],
-      };
+      labelA = 'Home';
+      labelB = 'Away';
+      groupA = filteredData.filter(game => game.is_home === 't');
+      groupB = filteredData.filter(game => game.is_home === 'f');
     } else {
-      const regularGames = filteredData.filter(game => game.season_type === 'Regular Season');
-      const playoffGames = filteredData.filter(game => game.season_type === 'Playoffs');
-
-      return {
-        labels: ['Regular Season', 'Playoffs'],
-        datasets: [
-          {
-            label: 'Win Rate',
-            data: [
-              regularGames.length > 0 ? (regularGames.filter(g => g.wl === 'W').length / regularGames.length) * 100 : 0,
-              playoffGames.length > 0 ? (playoffGames.filter(g => g.wl === 'W').length / playoffGames.length) * 100 : 0,
-            ],
-            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-          },
-          {
-            label: 'Average Moneyline',
-            data: [
-              regularGames.length > 0 ? regularGames.reduce((acc, game) => acc + parseFloat(game.moneyline_price), 0) / regularGames.length : 0,
-              playoffGames.length > 0 ? playoffGames.reduce((acc, game) => acc + parseFloat(game.moneyline_price), 0) / playoffGames.length : 0,
-            ],
-            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1,
-          },
-        ],
-      };
+      labelA = 'Regular Season';
+      labelB = 'Playoffs';
+      groupA = filteredData.filter(game => game.season_type === 'Regular Season');
+      groupB = filteredData.filter(game => game.season_type === 'Playoffs');
     }
+
+    const calcWinRate = (games: GameData[]) =>
+      games.length > 0 ? (games.filter(g => g.wl === 'W').length / games.length) * 100 : 0;
+
+    const calcAvgMoneyline = (games: GameData[]) =>
+      games.length > 0 ? games.reduce((acc, g) => acc + parseFloat(g.moneyline_price), 0) / games.length : 0;
+
+    return {
+      labels: ['Win Rate (%)', 'Average Moneyline'],
+      datasets: [
+        {
+          label: labelA,
+          data: [calcWinRate(groupA), calcAvgMoneyline(groupA)],
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+        },
+        {
+          label: labelB,
+          data: [calcWinRate(groupB), calcAvgMoneyline(groupB)],
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+        },
+      ],
+    };
   };
 
   const options = {
@@ -133,12 +116,11 @@ const TeamComparisonChart: React.FC<Props> = ({ data, filters }) => {
 
       {/* Optional chart caption */}
       <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
-          Here we see how a team compares when either playing at home or away from home and also how they perform in the regular season vs. the playoffs. 
-          Win rate is shown as a percentage and moneyline is avergage across the respective assortment of games. 
-  
-        </p>
+        This chart compares a team's win rate and average moneyline under two different conditions:
+        Home vs Away or Regular Season vs Playoffs. Bars for each metric are grouped together for easier comparison.
+      </p>
     </div>
   );
 };
 
-export default TeamComparisonChart; 
+export default TeamComparisonChart;
