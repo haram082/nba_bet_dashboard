@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
-  Legend,
+  Legend
 } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import { GameData, FilterState } from '../types/types';
 import './UnderdogFactorsChart.css';
 
 ChartJS.register(
-  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
   Legend
 );
@@ -20,13 +26,33 @@ interface Props {
   filters: FilterState;
 }
 
+interface Factor {
+  id: string;
+  name: string;
+  threshold: number | string;
+  enabled: boolean;
+  direction: 'gte' | 'lte' | 'eq';
+}
+
+interface FactorImpact {
+  name: string;
+  displayName: string;
+  value: number; // Win rate when threshold is met
+  color: string;
+  borderColor: string;
+  meetsThreshold: number; // Number of games that meet the threshold
+  winsWithFactor: number; // Number of wins when meeting threshold
+  totalUnderdogGames: number;
+  thresholdPercentage: number; // % of underdog games meeting the threshold
+}
+
 const FACTORS: Factor[] = [
-  { id: 'fg3_pct', name: '3PT%', threshold: 35, enabled: true, direction: 'gte' },
-  { id: 'reb', name: 'Rebounds', threshold: 45, enabled: true, direction: 'gte' },
+  { id: 'fg3_pct', name: '3PT%', threshold: 0.35, enabled: true, direction: 'gte' },
+  { id: 'reb', name: 'Rebounds', threshold: 42, enabled: true, direction: 'gte' },
   { id: 'ast', name: 'Assists', threshold: 25, enabled: true, direction: 'gte' },
-  { id: 'tov', name: 'Turnovers', threshold: 12, enabled: true, direction: 'lte' },
-  { id: 'ftm', name: 'Free Throws Made', threshold: 18, enabled: true, direction: 'gte' },
-  { id: 'fg_pct', name: 'Field Goal %', threshold: 47, enabled: true, direction: 'gte' },
+  { id: 'tov', name: 'Turnovers', threshold: 15, enabled: true, direction: 'lte' },
+  { id: 'ftm', name: 'Free Throws Made', threshold: 20, enabled: true, direction: 'gte' },
+  { id: 'fg_pct', name: 'Field Goal %', threshold: 0.45, enabled: true, direction: 'gte' },
   { id: 'stl', name: 'Steals', threshold: 8, enabled: true, direction: 'gte' },
   { id: 'blk', name: 'Blocks', threshold: 5, enabled: true, direction: 'gte' },
   { id: 'oreb', name: 'Offensive Rebounds', threshold: 12, enabled: true, direction: 'gte' },
@@ -37,26 +63,56 @@ const FACTORS: Factor[] = [
   { id: 'is_home', name: 'Home Game', threshold: 't', enabled: true, direction: 'eq' },
 ];
 
-interface Factor {
-  id: string;
-  name: string;
-  threshold: number | string;
-  enabled: boolean;
-  direction: 'gte' | 'lte' | 'eq';
-}
+// Function to get color based on win rate percentage
+const getColorForPercentage = (percentage: number): { bg: string, border: string } => {
+  if (percentage >= 70) {
+    return { bg: 'rgba(0, 176, 80, 0.7)', border: 'rgba(0, 150, 64, 1)' }; // Very strong - Green
+  } else if (percentage >= 60) {
+    return { bg: 'rgba(0, 176, 240, 0.7)', border: 'rgba(0, 150, 200, 1)' }; // Strong - Blue
+  } else if (percentage >= 50) {
+    return { bg: 'rgba(255, 192, 0, 0.7)', border: 'rgba(230, 175, 0, 1)' }; // Moderate - Gold
+  } else if (percentage >= 40) {
+    return { bg: 'rgba(255, 153, 0, 0.7)', border: 'rgba(230, 138, 0, 1)' }; // Slight positive - Orange
+  } else if (percentage >= 30) {
+    return { bg: 'rgba(255, 102, 0, 0.7)', border: 'rgba(230, 92, 0, 1)' }; // Neutral - Light Orange
+  } else {
+    return { bg: 'rgba(255, 0, 0, 0.7)', border: 'rgba(230, 0, 0, 1)' }; // Negative - Red
+  }
+};
+
+const getOperatorSymbol = (direction: string): string => {
+  switch (direction) {
+    case 'gte': return '≥';
+    case 'lte': return '≤';
+    case 'eq': return '=';
+    default: return '';
+  }
+};
+
+const getDisplayName = (factor: Factor): string => {
+  if (factor.id === 'is_home') {
+    return 'Home Game';
+  }
+  const operator = getOperatorSymbol(factor.direction);
+  return `${factor.name} ${operator} ${factor.threshold}`;
+};
 
 const UnderdogFactorsChart: React.FC<Props> = ({ data, filters }) => {
   const [factors, setFactors] = useState<Factor[]>(FACTORS);
-
+  
+  // Filter for only underdog games
   const filteredData = data.filter(game => 
-    (game.team_id === filters.selectedTeam || game.opp_team_id === filters.selectedTeam) &&
+    (game.team_id === filters.selectedTeam) &&
     game.season_year === filters.selectedYear.toString() &&
     parseFloat(game.moneyline_price) > 0 // Only underdog games
   );
+  
+  const totalUnderdogGames = filteredData.length;
 
   const calculateFactorImpact = () => {
     const enabledFactors = factors.filter(f => f.enabled);
-    const factorData = enabledFactors.map(factor => {
+    const factorImpacts: FactorImpact[] = enabledFactors.map(factor => {
+      // For each factor, find games where the factor threshold was met
       let gamesWithFactor: GameData[] = [];
       if (factor.direction === 'eq') {
         gamesWithFactor = filteredData.filter(game => game[factor.id as keyof GameData] === factor.threshold);
@@ -68,68 +124,45 @@ const UnderdogFactorsChart: React.FC<Props> = ({ data, filters }) => {
             : statValue(game) <= Number(factor.threshold)
         );
       }
+      
+      // Calculate win rate as wins with factor / games meeting threshold
       const winsWithFactor = gamesWithFactor.filter(game => game.wl === 'W');
       const winRate = gamesWithFactor.length > 0 ? (winsWithFactor.length / gamesWithFactor.length) * 100 : 0;
+      const thresholdPercentage = totalUnderdogGames > 0 ? (gamesWithFactor.length / totalUnderdogGames) * 100 : 0;
+      
+      const colorSet = getColorForPercentage(winRate);
+      
       return {
         name: factor.name,
+        displayName: getDisplayName(factor),
         value: winRate,
+        color: colorSet.bg,
+        borderColor: colorSet.border,
+        meetsThreshold: gamesWithFactor.length,
+        winsWithFactor: winsWithFactor.length,
+        totalUnderdogGames,
+        thresholdPercentage
       };
     });
-    return {
-      labels: factorData.map(f => f.name),
+
+    // Sort factors by win rate (descending)
+    const sortedFactors = [...factorImpacts].sort((a, b) => b.value - a.value);
+    
+    const chartData = {
+      labels: sortedFactors.map(f => f.displayName),
       datasets: [{
-        data: factorData.map(f => f.value),
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.5)',
-          'rgba(54, 162, 235, 0.5)',
-          'rgba(255, 206, 86, 0.5)',
-          'rgba(75, 192, 192, 0.5)',
-          'rgba(153, 102, 255, 0.5)',
-          'rgba(255, 159, 64, 0.5)',
-          'rgba(100, 200, 100, 0.5)',
-          'rgba(200, 100, 200, 0.5)',
-          'rgba(100, 100, 200, 0.5)',
-          'rgba(200, 200, 100, 0.5)',
-          'rgba(100, 200, 200, 0.5)',
-          'rgba(200, 100, 100, 0.5)',
-          'rgba(150, 150, 150, 0.5)',
-          'rgba(50, 150, 250, 0.5)',
-          'rgba(250, 150, 50, 0.5)',
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-          'rgba(255, 159, 64, 1)',
-          'rgba(100, 200, 100, 1)',
-          'rgba(200, 100, 200, 1)',
-          'rgba(100, 100, 200, 1)',
-          'rgba(200, 200, 100, 1)',
-          'rgba(100, 200, 200, 1)',
-          'rgba(200, 100, 100, 1)',
-          'rgba(150, 150, 150, 1)',
-          'rgba(50, 150, 250, 1)',
-          'rgba(250, 150, 50, 1)',
-        ],
+        label: 'Win %',
+        data: sortedFactors.map(f => f.value),
+        backgroundColor: sortedFactors.map(f => f.color),
+        borderColor: sortedFactors.map(f => f.borderColor),
         borderWidth: 1,
       }],
     };
+
+    return { sortedFactors, chartData };
   };
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-      },
-      title: {
-        display: true,
-        text: 'Underdog Win Factors Impact',
-      },
-    },
-  };
+  const { sortedFactors, chartData } = calculateFactorImpact();
 
   const toggleFactor = (factorId: string) => {
     setFactors(factors.map(f => 
@@ -137,35 +170,119 @@ const UnderdogFactorsChart: React.FC<Props> = ({ data, filters }) => {
     ));
   };
 
+  // Color legend explanation
+  const colorLegend = [
+    { range: "70%+", color: "rgba(0, 176, 80, 0.7)" },
+    { range: "60-69%", color: "rgba(0, 176, 240, 0.7)" },
+    { range: "50-59%", color: "rgba(255, 192, 0, 0.7)" },
+    { range: "40-49%", color: "rgba(255, 153, 0, 0.7)" },
+    { range: "30-39%", color: "rgba(255, 102, 0, 0.7)" },
+    { range: "<30%", color: "rgba(255, 0, 0, 0.7)" }
+  ];
+
   return (
-    <div>
-      <div className="factors-container">
-        {factors.map(factor => (
-          <div key={factor.id} className="factor-item">
-            <input
-              type="checkbox"
-              checked={factor.enabled}
-              onChange={() => toggleFactor(factor.id)}
-              className="factor-checkbox"
-            />
-            <span className="factor-name">{factor.name}</span>
-          </div>
-        ))}
+    <div className="underdogFactors-container">
+      <div className="chart-header">
+        <h3 className="chart-explanation">
+          Win rate when threshold is met ({totalUnderdogGames} total underdog games)
+        </h3>
       </div>
-      <div className="chart-container">
-        <Pie data={calculateFactorImpact()} options={options} />
+      
+      <div className="chart-controls">
+        <div className="factors-container">
+          {factors.map(factor => (
+            <div key={factor.id} className="factor-item">
+              <input
+                type="checkbox"
+                checked={factor.enabled}
+                onChange={() => toggleFactor(factor.id)}
+                className="factor-checkbox"
+                id={`factor-${factor.id}`}
+              />
+              <label htmlFor={`factor-${factor.id}`} className="factor-name">
+                {getDisplayName(factor)}
+              </label>
+            </div>
+          ))}
+        </div>
+        
+        <div className="color-legend">
+          <div className="legend-title">Win Rate</div>
+          <div className="legend-items">
+            {colorLegend.map((item, index) => (
+              <div key={index} className="legend-item">
+                <div className="color-box" style={{ backgroundColor: item.color }}></div>
+                <div className="legend-label">{item.range}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <div className="chart-wrapper">
+        <Bar 
+          data={chartData} 
+          options={{
+            indexAxis: 'y' as const,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const index = context.dataIndex;
+                    const factor = sortedFactors[index];
+                    return [
+                      `Win Rate: ${factor.value.toFixed(1)}% when threshold met`,
+                      `${factor.winsWithFactor} wins out of ${factor.meetsThreshold} games meeting threshold`,
+                      `(${factor.thresholdPercentage.toFixed(1)}% of underdog games meet this threshold)`
+                    ];
+                  }
+                }
+              },
+              title: {
+                display: true,
+                text: 'Underdog Win Factors (Win Rate When Threshold Met)',
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              },
+              y: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }}
+          height={500}
+        />
       </div>
 
-      {/* Optional chart caption */}
-      <p style={{ textAlign: 'center', fontSize: '14px', marginTop: '8px' }}>
-          This pie chart shows what factors played a big role in this teams underdog wins for this season.
-          An underdog win is classified when a team is not favored to win (based on a positive moneyline) but they pull of the win anyways. 
-          Hovering over a slice will show a percentage that represents what percent of the total underdog wins that stat played a big part in;
-          "big part" meaning it met a threshold of significance that we determined ourselves. 
-  
-        </p>
+      <div className="chart-header">
+        <h3 className="chart-explanation">
+          Win rate when threshold is met ({totalUnderdogGames} total underdog games)
+        </h3>
+        <div className="chart-caption">
+          This chart analyzes which statistical thresholds best predict upsets by calculating the win percentage
+          for underdog games (teams with positive moneyline odds) when each factor occurs. For example, "3PT% ≥ 35" 
+          shows the percentage of games won when the team shot 35% or better from three-point range as an underdog. 
+          Win rates are calculated as (wins with factor ÷ games meeting threshold) × 100. Each factor is tested 
+          independently to identify which statistical benchmarks most reliably signal potential upset victories.
+        </div>
+      </div>
+
     </div>
   );
 };
 
-export default UnderdogFactorsChart; 
+export default UnderdogFactorsChart;

@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     selectedTeam: '',
-    selectedYear: new Date().getFullYear()
+    selectedYear: 2017
   });
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
 
